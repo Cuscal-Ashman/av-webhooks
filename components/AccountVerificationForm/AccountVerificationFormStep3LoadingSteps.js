@@ -16,13 +16,11 @@ export function AccountVerificationFormStep3LoadingSteps() {
   const [isResumeModalOpen, openResumeModal, closeResumeModal] = useTernaryState(false);
   const { basiqConnection, goForward } = useAccountVerificationForm();
   const { error, completed, stepNameInProgress, reset, setJobId } = basiqConnection;
-
-  // State for managing loading progress, jobId and payload
   const [progress, setProgress] = useState(0);
   const [localJobId, setLocalJobId] = useState(null);
-  const [receivedPayload, setReceivedPayload] = useState(null);
+  const [webhookData, setWebhookData] = useState(null); // State to store webhook event data
 
-  // (a) Extract jobId from URL and store it locally
+  // Get jobId from URL
   useEffect(() => {
     const jobIdsParam = new URLSearchParams(window.location.search).get("jobIds");
     if (jobIdsParam) {
@@ -34,7 +32,7 @@ export function AccountVerificationFormStep3LoadingSteps() {
     }
   }, []);
 
-  // (b) Initialize Socket.IO client and listen for webhook events
+  // Initialize Socket.IO client and listen for webhook events
   useEffect(() => {
     if (typeof window === "undefined") return;
     
@@ -47,7 +45,8 @@ export function AccountVerificationFormStep3LoadingSteps() {
 
     socket.on("webhookEvent", (data) => {
       console.log("Received webhook event:", data);
-      setReceivedPayload(data); // Store the payload to display it
+      setWebhookData(data); // Save the received webhook data to state
+
       if (data.eventTypeId === "transactions.updated" && localJobId) {
         setProgress(100);
         setJobId(localJobId);
@@ -75,7 +74,9 @@ export function AccountVerificationFormStep3LoadingSteps() {
               <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
                 {error?.response?.data.data[0].detail}
               </h2>
-              <p className="text-sm sm:text-base text-neutral-muted-darker">{error?.message}</p>
+              <p className="text-sm sm:text-base text-neutral-muted-darker">
+                {error?.message}
+              </p>
             </div>
             <Button block onClick={reset}>
               Try again
@@ -108,12 +109,12 @@ export function AccountVerificationFormStep3LoadingSteps() {
           </div>
         )}
 
-        {/* Display the received payload, if any */}
-        {receivedPayload && (
-          <div className="w-full p-4 bg-gray-100 rounded">
-            <h3 className="text-lg font-semibold mb-2">Received Payload:</h3>
-            <pre className="text-sm overflow-x-auto">
-              {JSON.stringify(receivedPayload, null, 2)}
+        {/* Display the webhook event data if available */}
+        {webhookData && (
+          <div className="mt-8 w-full bg-gray-100 p-4 rounded shadow">
+            <h3 className="text-lg font-semibold mb-2">Webhook Event Data</h3>
+            <pre className="text-xs overflow-auto">
+              {JSON.stringify(webhookData, null, 2)}
             </pre>
           </div>
         )}
