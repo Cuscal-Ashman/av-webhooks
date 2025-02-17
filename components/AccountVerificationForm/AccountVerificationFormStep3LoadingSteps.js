@@ -1,11 +1,14 @@
-// components/AccountVerificationFormStep3LoadingSteps.js
 import { useEffect, useState } from 'react';
-import io from 'socket.io-client';
 import { useTernaryState } from '../../utils/useTernaryState';
 import { Button } from '../Button';
 import { CircularProgressBar } from '../CircularProgressBar';
 import { useAccountVerificationForm } from './AccountVerificationFormProvider';
 import { AccountVerificationFormResumeInBackgroundModal } from './AccountVerificationFormResumeInBackgroundModal';
+
+const STEP_NAME_MAP = {
+  "verify-credentials": "Verifying credentials...",
+  "retrieve-accounts": "Retrieving accounts...",
+};
 
 export function AccountVerificationFormStep3LoadingSteps() {
   // State for managing the resume modal
@@ -18,37 +21,45 @@ export function AccountVerificationFormStep3LoadingSteps() {
   const [progress, setProgress] = useState(0);
   const [localJobId, setLocalJobId] = useState(null);
 
-  // (a) Read jobId from URL and store it locally (but don't trigger polling yet)
+  // (a) Read jobId from URL and store it locally
   useEffect(() => {
-    const jobIdsParam = new URLSearchParams(window.location.search).get("jobIds");
-    if (jobIdsParam) {
-      const uuidRegex = /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/g;
-      const uuids = jobIdsParam.match(uuidRegex);
-      if (uuids && uuids.length > 0) {
-        setLocalJobId(uuids[0]);
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const jobIdsParam = searchParams.get("jobIds");
+      if (jobIdsParam) {
+        const uuidRegex = /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/g;
+        const uuids = jobIdsParam.match(uuidRegex);
+        setLocalJobId(uuids && uuids.length > 0 ? uuids[0] : jobIdsParam);
       } else {
-        setLocalJobId(jobIdsParam);
+        console.warn("No jobIds query param found.");
       }
-    } else {
-      console.log("No jobIds query param found.");
     }
   }, []);
 
-  // (b) Initialize the Socket.IO client and listen for webhook events
+  // (b) Initialize the Socket.IO client and listen for webhook events on the client side only
   useEffect(() => {
-    // Ensure the Socket.IO server is up (you could also call /api/socketio explicitly)
+    // Ensure this runs only in the browser
+    if (typeof window === "undefined") return;
+
+    // Dynamically require the client to avoid SSR issues
+    const io = require("socket.io-client");
     const socket = io();
+
+    socket.on("connect", () => {
+      console.log("Socket connected with id:", socket.id);
+    });
 
     socket.on("webhookEvent", (data) => {
       console.log("Received webhook event:", data);
       if (data.eventTypeId === "transactions.updated" && localJobId) {
-        // When we get the webhook, update progress and trigger job polling.
+        // When the webhook is received, update progress and trigger the job polling via setJobId.
         setProgress(100);
         setJobId(localJobId);
       }
     });
 
     return () => {
+      console.log("Disconnecting socket");
       socket.disconnect();
     };
   }, [localJobId, setJobId]);
@@ -99,8 +110,3 @@ export function AccountVerificationFormStep3LoadingSteps() {
     </div>
   );
 }
-
-const STEP_NAME_MAP = {
-  "verify-credentials": "Verifying credentials...",
-  "retrieve-accounts": "Retrieving accounts...",
-};
