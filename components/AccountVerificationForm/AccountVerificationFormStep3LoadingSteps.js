@@ -16,10 +16,13 @@ export function AccountVerificationFormStep3LoadingSteps() {
   const [isResumeModalOpen, openResumeModal, closeResumeModal] = useTernaryState(false);
   const { basiqConnection, goForward } = useAccountVerificationForm();
   const { error, completed, stepNameInProgress, reset, setJobId } = basiqConnection;
+
+  // State for managing loading progress, jobId and payload
   const [progress, setProgress] = useState(0);
   const [localJobId, setLocalJobId] = useState(null);
+  const [receivedPayload, setReceivedPayload] = useState(null);
 
-  // Get jobId from URL
+  // (a) Extract jobId from URL and store it locally
   useEffect(() => {
     const jobIdsParam = new URLSearchParams(window.location.search).get("jobIds");
     if (jobIdsParam) {
@@ -31,7 +34,7 @@ export function AccountVerificationFormStep3LoadingSteps() {
     }
   }, []);
 
-  // Initialize Socket.IO client and log events
+  // (b) Initialize Socket.IO client and listen for webhook events
   useEffect(() => {
     if (typeof window === "undefined") return;
     
@@ -44,6 +47,7 @@ export function AccountVerificationFormStep3LoadingSteps() {
 
     socket.on("webhookEvent", (data) => {
       console.log("Received webhook event:", data);
+      setReceivedPayload(data); // Store the payload to display it
       if (data.eventTypeId === "transactions.updated" && localJobId) {
         setProgress(100);
         setJobId(localJobId);
@@ -71,9 +75,7 @@ export function AccountVerificationFormStep3LoadingSteps() {
               <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
                 {error?.response?.data.data[0].detail}
               </h2>
-              <p className="text-sm sm:text-base text-neutral-muted-darker">
-                {error?.message}
-              </p>
+              <p className="text-sm sm:text-base text-neutral-muted-darker">{error?.message}</p>
             </div>
             <Button block onClick={reset}>
               Try again
@@ -103,6 +105,16 @@ export function AccountVerificationFormStep3LoadingSteps() {
             <Button block variant="subtle" onClick={openResumeModal}>
               Resume in background
             </Button>
+          </div>
+        )}
+
+        {/* Display the received payload, if any */}
+        {receivedPayload && (
+          <div className="w-full p-4 bg-gray-100 rounded">
+            <h3 className="text-lg font-semibold mb-2">Received Payload:</h3>
+            <pre className="text-sm overflow-x-auto">
+              {JSON.stringify(receivedPayload, null, 2)}
+            </pre>
           </div>
         )}
       </div>
