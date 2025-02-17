@@ -46,13 +46,21 @@ export function AccountVerificationFormStep3LoadingSteps() {
     socket.on("webhookEvent", (data) => {
       console.log("Received webhook event:", data);
       setWebhookData(data); // Save the received webhook data to state
-
-      // Update progress and job state if the event is for transactions.updated
+    
+      // If the event indicates that transactions have been updated, update progress,
+      // set the job ID, disconnect the socket, and begin polling the job endpoint.
       if (data.eventTypeId === "transactions.updated" && localJobId) {
         setProgress(100);
         setJobId(localJobId);
+        
+        // Disconnect the socket after processing the event
+        socket.disconnect();
+        
+        // Start polling the job endpoint
+        pollJobEndpoint();
       }
     });
+    
 
     socket.on("disconnect", (reason) => {
       console.log("Socket disconnected:", reason);
