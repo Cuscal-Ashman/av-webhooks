@@ -36,8 +36,8 @@ export function AccountVerificationFormStep3LoadingSteps() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     
-    // Connect to our Socket.IO endpoint at /api/socketio
-    const socket = io(undefined, { path: "/api/socketio" });
+    // Use window.location.origin to explicitly connect to the correct origin.
+    const socket = io(window.location.origin, { path: "/api/socketio" });
 
     socket.on("connect", () => {
       console.log("Socket connected with id:", socket.id);
@@ -47,6 +47,7 @@ export function AccountVerificationFormStep3LoadingSteps() {
       console.log("Received webhook event:", data);
       setWebhookData(data); // Save the received webhook data to state
 
+      // Update progress and job state if the event is for transactions.updated
       if (data.eventTypeId === "transactions.updated" && localJobId) {
         setProgress(100);
         setJobId(localJobId);

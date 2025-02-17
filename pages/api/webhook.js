@@ -10,7 +10,7 @@ export const config = {
       const webhookEvent = req.body;
       console.log("Received webhook event on server:", webhookEvent);
   
-      // Emit the event if the Socket.IO server is initialized
+      // Check if the Socket.IO server is available and emit the event
       if (res.socket.server.io) {
         console.log("Emitting event to connected clients");
         res.socket.server.io.emit("webhookEvent", webhookEvent);
