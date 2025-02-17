@@ -12,14 +12,14 @@ const STEP_NAME_MAP = {
 };
 
 export function AccountVerificationFormStep3LoadingSteps() {
+  // State for managing the resume modal
   const [isResumeModalOpen, openResumeModal, closeResumeModal] = useTernaryState(false);
   const { basiqConnection, goForward } = useAccountVerificationForm();
   const { error, completed, stepNameInProgress, reset, setJobId } = basiqConnection;
-
   const [progress, setProgress] = useState(0);
   const [localJobId, setLocalJobId] = useState(null);
 
-  // (a) Get jobId from URL
+  // Get jobId from URL
   useEffect(() => {
     const jobIdsParam = new URLSearchParams(window.location.search).get("jobIds");
     if (jobIdsParam) {
@@ -31,11 +31,11 @@ export function AccountVerificationFormStep3LoadingSteps() {
     }
   }, []);
 
-  // (b) Initialize Socket.IO client on the correct path
+  // Initialize Socket.IO client and log events
   useEffect(() => {
     if (typeof window === "undefined") return;
-
-    // Notice we pass { path: '/api/socketio' } so that the client connects to our API route
+    
+    // Connect to our Socket.IO endpoint at /api/socketio
     const socket = io(undefined, { path: "/api/socketio" });
 
     socket.on("connect", () => {
@@ -48,6 +48,10 @@ export function AccountVerificationFormStep3LoadingSteps() {
         setProgress(100);
         setJobId(localJobId);
       }
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log("Socket disconnected:", reason);
     });
 
     return () => {
