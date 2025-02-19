@@ -1,103 +1,69 @@
 import { useEffect, useState } from "react";
 import io from "socket.io-client";
-import { Transition } from "@headlessui/react";
 import { Button } from "../Button";
 import { CircularProgressBar } from "../CircularProgressBar";
 import { useAccountVerificationForm } from "./AccountVerificationFormProvider";
 import { AccountVerificationFormResumeInBackgroundModal } from "./AccountVerificationFormResumeInBackgroundModal";
 
 export function AccountVerificationFormStep3LoadingSteps() {
-  const [progress, setProgress] = useState(0);
   const [webhookData, setWebhookData] = useState(null);
   const [alertMessage, setAlertMessage] = useState("");
   const [isAlertVisible, setIsAlertVisible] = useState(false);
-  const [localJobId, setLocalJobId] = useState(null);
 
   const { basiqConnection, goForward } = useAccountVerificationForm();
-  const { error, completed, reset, setJobId } = basiqConnection;
+  const { error, completed } = basiqConnection;
 
-  // Extract job ID from URL
+  // Listen for WebSocket Events
   useEffect(() => {
-    const jobIdsParam = new URLSearchParams(window.location.search).get("jobIds");
-    if (jobIdsParam) {
-      const uuidRegex = /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/g;
-      const uuids = jobIdsParam.match(uuidRegex);
-      const extractedJobId = uuids ? uuids[0] : jobIdsParam;
-      setLocalJobId(extractedJobId);
-      setJobId(extractedJobId);
-    }
-  }, [setJobId]);
+    if (typeof window === "undefined") return;
 
-  // Listen for Webhook Event (No Polling)
-  useEffect(() => {
-    if (typeof window === "undefined" || !localJobId) return;
-
-    const socket = io(window.location.origin, { path: "/api/socketio" });
+    const socket = io(window.location.origin);
 
     socket.on("connect", () => {
       console.log("Socket connected:", socket.id);
     });
 
-    // Listen for webhook event
+    // Listen for webhook event and show an alert
     socket.on("webhookEvent", (data) => {
       console.log("Received webhook event:", data);
       setWebhookData(data);
 
-      if (data.eventTypeId === "transactions.updated") {
-        setProgress(100);
-        setJobId(localJobId);
+      // Show alert
+      setAlertMessage("✅ Webhook received successfully!");
+      setIsAlertVisible(true);
 
-        // Show success alert
-        setAlertMessage("✅ Job Completed! Data received.");
-        setIsAlertVisible(true);
-
-        // Hide alert after 3 seconds
-        setTimeout(() => setIsAlertVisible(false), 3000);
-
-        socket.disconnect();
-      }
+      // Hide alert after 3 seconds
+      setTimeout(() => setIsAlertVisible(false), 3000);
     });
 
     return () => {
-      console.log("Disconnecting socket...");
+      console.log("Cleaning up socket connection...");
       socket.disconnect();
     };
-  }, [localJobId, setJobId]);
+  }, []);
 
   return (
     <div className="flex flex-col space-y-10 sm:space-y-12">
-      {/* Alert with Transition Animation */}
-      <Transition
-        show={isAlertVisible}
-        enter="transition ease-out duration-300"
-        enterFrom="opacity-0 translate-y-4"
-        enterTo="opacity-100 translate-y-0"
-        leave="transition ease-in duration-300"
-        leaveFrom="opacity-100 translate-y-0"
-        leaveTo="opacity-0 translate-y-4"
-      >
+      {/* Alert Message */}
+      {isAlertVisible && (
         <div className="fixed top-4 right-4 bg-green-500 text-white p-4 rounded shadow-lg">
           {alertMessage}
         </div>
-      </Transition>
+      )}
 
       <div className="flex flex-col items-center text-center space-y-8">
-        <CircularProgressBar value={progress} error={error} />
+        <CircularProgressBar value={100} error={error} />
 
         {error ? (
           <div className="w-full space-y-8">
             <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
-              {error?.response?.data?.data?.[0]?.detail || "An error occurred"}
+              {error?.message || "An error occurred"}
             </h2>
-            <p className="text-sm sm:text-base text-neutral-muted-darker">
-              {error?.message}
-            </p>
-            <Button block onClick={reset}>Try again</Button>
+            <Button block onClick={() => window.location.reload()}>Try again</Button>
           </div>
         ) : completed ? (
           <div className="w-full space-y-8">
             <h3 className="text-xl font-semibold tracking-tight sm:text-2xl">Connected 🎉</h3>
-            <p className="text-sm sm:text-base text-neutral-muted-darker">One last step to go...</p>
             <Button block onClick={goForward}>Continue</Button>
           </div>
         ) : (
@@ -112,11 +78,13 @@ export function AccountVerificationFormStep3LoadingSteps() {
         {webhookData && (
           <div className="mt-8 w-full bg-gray-100 p-4 rounded shadow">
             <h3 className="text-lg font-semibold mb-2">Webhook Event Data</h3>
-            <pre className="text-xs overflow-auto">{JSON.stringify(webhookData, null, 2)}</pre>
+            <pre className="text-xs overflow-auto">
+              {JSON.stringify(webhookData, null, 2)}
+            </pre>
           </div>
         )}
       </div>
-      
+
       <AccountVerificationFormResumeInBackgroundModal />
     </div>
   );
