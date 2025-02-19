@@ -10,7 +10,7 @@ export default function webhookHandler(req, res) {
   if (!res.socket.server.io) {
     console.log("Initializing Socket.IO server...");
     const io = new Server(res.socket.server, {
-      path: "/api/socketio", // Explicitly setting path
+      path: "/api/webhook", // Explicitly setting path
       addTrailingSlash: false, // Prevents unnecessary slashes in paths
       cors: {
         origin: "*",
