@@ -2,19 +2,28 @@
 import { Server } from "socket.io";
 
 export default function handler(req, res) {
-  // Check if Socket.IO server is already initialized
   if (!res.socket.server.io) {
     console.log("Initializing Socket.IO server...");
 
-    // Initialize the Socket.IO server on the underlying HTTP server
     const io = new Server(res.socket.server, {
-      path: "/api/webhook",
-      // Uncomment and configure CORS if needed:
-      // cors: { origin: "*" },
+      path: "/api/socketio",
+      cors: {
+        origin: "*",
+        methods: ["GET", "POST"],
+      },
     });
 
-    // Attach the instance to the socket server so it can be reused elsewhere
+    // Handle WebSocket connections
+    io.on("connection", (socket) => {
+      console.log("New client connected:", socket.id);
+
+      socket.on("disconnect", () => {
+        console.log("Client disconnected:", socket.id);
+      });
+    });
+
     res.socket.server.io = io;
   }
+
   res.end();
 }
