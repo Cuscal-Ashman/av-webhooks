@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import io from "socket.io-client";
-import { Button } from "../Button";
-import { CircularProgressBar } from "../CircularProgressBar";
-import { useAccountVerificationForm } from "./AccountVerificationFormProvider";
-import { AccountVerificationFormResumeInBackgroundModal } from "./AccountVerificationFormResumeInBackgroundModal";
+import { Button } from "@/components/Button";
+import { CircularProgressBar } from "@/components/CircularProgressBar";
+import { useAccountVerificationForm } from "@/components/AccountVerificationForm/AccountVerificationFormProvider";
+import { AccountVerificationFormResumeInBackgroundModal } from "@/components/AccountVerificationForm/AccountVerificationFormResumeInBackgroundModal";
 
 export function AccountVerificationFormStep3LoadingSteps() {
   const [webhookData, setWebhookData] = useState(null);
