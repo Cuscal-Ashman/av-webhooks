@@ -47,7 +47,7 @@ export function AccountVerificationFormStep3LoadingSteps() {
         if (data.data.eventTypeId === "transactions.updated" && localJobId) {
           setProgress(100);
           setJobId(localJobId);
-          pollJobEndpoint(localJobId);
+          // pollJobEndpoint(localJobId);
         }
       }
     } catch (error) {
