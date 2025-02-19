@@ -14,7 +14,7 @@ const STEP_NAME_MAP = {
 export function AccountVerificationFormStep3LoadingSteps() {
   const [isResumeModalOpen, openResumeModal, closeResumeModal] = useTernaryState(false);
   const { basiqConnection, goForward } = useAccountVerificationForm();
-  const { error, completed, stepNameInProgress, reset, setJobId } = basiqConnection;
+  const { error, stepNameInProgress, reset, setJobId } = basiqConnection;
   
   const [progress, setProgress] = useState(0);
   const [localJobId, setLocalJobId] = useState(null);
@@ -63,7 +63,7 @@ export function AccountVerificationFormStep3LoadingSteps() {
   }, [localJobId, setJobId]);
 
   return (
-    <div className="flex flex-col space-y-10 sm:space-y-12">
+    <div className="sm:space-y-12$1$2">
       <div className="flex flex-col items-center text-center space-y-8">
         <CircularProgressBar value={progress} error={error} />
 
