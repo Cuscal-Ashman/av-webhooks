@@ -39,7 +39,7 @@ export function AccountVerificationFormStep3LoadingSteps() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const socket = io(window.location.origin, { path: "/api/webhook" });
+    const socket = io(window.location.origin, { path: "/api/socketio" }); // 🔥 FIX: Connect to `/api/socketio`
 
     socket.on("connect", () => {
       console.log("Socket connected with id:", socket.id);
@@ -52,18 +52,22 @@ export function AccountVerificationFormStep3LoadingSteps() {
       if (data.eventTypeId === "transactions.updated" && localJobId) {
         setProgress(100);
         setJobId(localJobId);
-        socket.disconnect();
+        socket.disconnect(); // ✅ Close socket upon completion
       }
     });
 
+    socket.on("disconnect", () => {
+      console.log("Socket disconnected.");
+    });
+
     return () => {
-      console.log("Disconnecting socket");
+      console.log("Cleaning up socket connection...");
       socket.disconnect();
     };
   }, [localJobId, setJobId]);
 
   return (
-    <div className="sm:space-y-12$1$2">
+    <div className="sm:space-y-12">
       <div className="flex flex-col items-center text-center space-y-8">
         <CircularProgressBar value={progress} error={error} />
 
@@ -71,7 +75,7 @@ export function AccountVerificationFormStep3LoadingSteps() {
           <div className="w-full space-y-8">
             <div className="space-y-3 sm:space-y-4">
               <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
-                {error?.response?.data.data[0].detail}
+                {error?.response?.data?.data[0]?.detail}
               </h2>
               <p className="text-sm sm:text-base text-neutral-muted-darker">
                 {error?.message}
