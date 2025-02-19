@@ -33,7 +33,7 @@ export function AccountVerificationFormStep3LoadingSteps() {
     }
   }, [setJobId]);
 
-  // Function to poll webhook data from the API
+  // Function to poll webhook data
   const pollWebhookData = async () => {
     try {
       const response = await fetch("/api/webhook");
@@ -44,7 +44,7 @@ export function AccountVerificationFormStep3LoadingSteps() {
         setWebhookData(data);
         console.log("📩 Received webhook data:", data);
 
-        if (data.eventTypeId === "transactions.updated" && localJobId) {
+        if (data.data.eventTypeId === "transactions.updated" && localJobId) {
           setProgress(100);
           setJobId(localJobId);
           pollJobEndpoint(localJobId);
@@ -127,12 +127,12 @@ export function AccountVerificationFormStep3LoadingSteps() {
           </div>
         )}
 
-        {/* (Optional) Display the webhook event data */}
+        {/* ✅ Display Webhook Data in UI */}
         {webhookData && (
           <div className="mt-8 w-full bg-gray-100 p-4 rounded shadow">
             <h3 className="text-lg font-semibold mb-2">Webhook Event Data</h3>
             <pre className="text-xs overflow-auto">
-              {JSON.stringify(webhookData, null, 2)}
+              {JSON.stringify(webhookData.data, null, 2)}
             </pre>
           </div>
         )}
