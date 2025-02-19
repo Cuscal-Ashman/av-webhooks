@@ -1,4 +1,3 @@
-// pages/api/webhook.js
 import { Server } from "socket.io";
 
 export const config = {
@@ -10,7 +9,15 @@ export const config = {
 export default function webhookHandler(req, res) {
   if (!res.socket.server.io) {
     console.log("Initializing Socket.IO server...");
-    const io = new Server(res.socket.server);
+    const io = new Server(res.socket.server, {
+      path: "/api/socketio", // Explicitly setting path
+      addTrailingSlash: false, // Prevents unnecessary slashes in paths
+      cors: {
+        origin: "*",
+        methods: ["GET", "POST"],
+      },
+    });
+    
     res.socket.server.io = io;
   }
 
@@ -18,7 +25,7 @@ export default function webhookHandler(req, res) {
     const webhookEvent = req.body;
     console.log("Received webhook event:", webhookEvent);
 
-    // Emit the event to the frontend
+    // Emit the event to all connected clients
     res.socket.server.io.emit("webhookEvent", webhookEvent);
 
     return res.status(200).json({ received: true, data: webhookEvent });
