@@ -47,13 +47,16 @@ export function AccountVerificationFormStep3LoadingSteps() {
 
     socket.on("webhookEvent", (data) => {
       console.log("Received webhook event:", data);
-      setWebhookData(data);
-
-      if (data.eventTypeId === "transactions.updated" && localJobId) {
-        setProgress(100);
-        setJobId(localJobId);
-        socket.disconnect(); // ✅ Close socket upon completion
-      }
+    
+      setTimeout(() => {
+        setWebhookData(data);
+    
+        if (data.eventTypeId === "transactions.updated" && localJobId) {
+          setProgress(100);
+          setJobId(localJobId);
+          socket.disconnect(); // ✅ Close socket upon completion
+        }
+      }, 2000); // Delay of 2 seconds (2000ms)
     });
 
     socket.on("disconnect", () => {
