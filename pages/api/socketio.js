@@ -13,16 +13,19 @@ export default function handler(req, res) {
       },
     });
 
-    // Handle WebSocket connections
-    io.on("connection", (socket) => {
-      console.log("New client connected:", socket.id);
-
-      socket.on("disconnect", () => {
-        console.log("Client disconnected:", socket.id);
-      });
-    });
-
+    // Store io instance in res.socket.server to prevent reinitialization
     res.socket.server.io = io;
+  }
+
+  const io = res.socket.server.io;
+
+  if (req.method === "POST") {
+    console.log("Received Webhook:", req.body);
+
+    // Emit webhook data to all connected clients
+    io.emit("webhookEvent", req.body);
+
+    return res.status(200).json({ success: true });
   }
 
   res.end();
