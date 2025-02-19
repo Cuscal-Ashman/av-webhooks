@@ -14,63 +14,86 @@ const STEP_NAME_MAP = {
 export function AccountVerificationFormStep3LoadingSteps() {
   const [isResumeModalOpen, openResumeModal, closeResumeModal] = useTernaryState(false);
   const { basiqConnection, goForward } = useAccountVerificationForm();
-  const { error, stepNameInProgress, reset, setJobId } = basiqConnection;
-  
+  const { error, completed, stepNameInProgress, reset, setJobId } = basiqConnection;
+
   const [progress, setProgress] = useState(0);
   const [localJobId, setLocalJobId] = useState(null);
   const [webhookData, setWebhookData] = useState(null);
 
+  // Extract job ID from URL query parameter
   useEffect(() => {
     const jobIdsParam = new URLSearchParams(window.location.search).get("jobIds");
     if (jobIdsParam) {
       const uuidRegex = /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/g;
       const uuids = jobIdsParam.match(uuidRegex);
       const extractedJobId = uuids && uuids.length > 0 ? uuids[0] : jobIdsParam;
-      
       setLocalJobId(extractedJobId);
       setJobId(extractedJobId);
-
-      console.log("Extracted jobId:", extractedJobId);
     } else {
-      console.warn("No jobIds query param found.");
+      console.warn("⚠️ No jobIds query param found.");
     }
   }, [setJobId]);
 
+  // Function to call job endpoint
+  async function pollJobEndpoint(jobId) {
+    if (!jobId) return;
+    try {
+      console.log("🚀 Calling job endpoint for jobId:", jobId);
+      const response = await fetch(`/api/job-status/${jobId}`);
+      const data = await response.json();
+
+      if (data.completed) {
+        console.log("✅ Job completed!", data);
+      } else {
+        console.log("⏳ Job still in progress...", data);
+        // Re-poll after 2 seconds if not completed
+        setTimeout(() => pollJobEndpoint(jobId), 2000);
+      }
+    } catch (error) {
+      console.error("❌ Error polling job endpoint:", error);
+    }
+  }
+
   useEffect(() => {
-    if (typeof window === "undefined") return; // Ensure it's client-side
-  
-    const socket = io("https://av-webhooks.vercel.app", { path: "/api/socketio" });
-  
+    if (typeof window === "undefined") return;
+
+    const socket = io(window.location.origin, { path: "/api/socketio" });
+
     socket.on("connect", () => {
-      console.log("Socket connected with id:", socket.id);
+      console.log("✅ Socket connected with id:", socket.id);
     });
-  
+
     socket.on("webhookEvent", (data) => {
-      console.log("Received webhook event:", data);
-  
-      setTimeout(() => {
-        setWebhookData(data);
-  
-        if (data.eventTypeId === "transactions.updated" && localJobId) {
-          setProgress(100);
-          setJobId(localJobId);
-          socket.disconnect(); // ✅ Close socket upon completion
-        }
-      }, 2000); // Delay by 2 seconds
+      console.log("📩 Received webhook event:", data);
+      setWebhookData(data);
+
+      if (data.eventTypeId === "transactions.updated" && localJobId) {
+        setProgress(100);
+        setJobId(localJobId);
+
+        // Call job endpoint before disconnecting the socket
+        pollJobEndpoint(localJobId);
+
+        // Disconnect socket after handling the event
+        setTimeout(() => {
+          console.log("🔌 Disconnecting socket after job check...");
+          socket.disconnect();
+        }, 1000); // Small delay before disconnecting
+      }
     });
-  
-    socket.on("disconnect", () => {
-      console.log("Socket disconnected.");
+
+    socket.on("disconnect", (reason) => {
+      console.log("❌ Socket disconnected:", reason);
     });
-  
+
     return () => {
-      console.log("Cleaning up socket connection...");
+      console.log("🧹 Cleaning up socket connection...");
       socket.disconnect();
     };
   }, [localJobId, setJobId]);
-  
+
   return (
-    <div className="sm:space-y-12">
+    <div className="flex flex-col space-y-10 sm:space-y-12">
       <div className="flex flex-col items-center text-center space-y-8">
         <CircularProgressBar value={progress} error={error} />
 
@@ -78,15 +101,17 @@ export function AccountVerificationFormStep3LoadingSteps() {
           <div className="w-full space-y-8">
             <div className="space-y-3 sm:space-y-4">
               <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
-                {error?.response?.data?.data[0]?.detail}
+                {error?.response?.data.data[0]?.detail}
               </h2>
               <p className="text-sm sm:text-base text-neutral-muted-darker">
                 {error?.message}
               </p>
             </div>
-            <Button block onClick={reset}>Try again</Button>
+            <Button block onClick={reset}>
+              Try again
+            </Button>
           </div>
-        ) : progress === 100 ? (
+        ) : completed ? (
           <div className="w-full space-y-8">
             <div className="space-y-3 sm:space-y-4">
               <h3 className="text-xl font-semibold tracking-tight sm:text-2xl">
@@ -96,7 +121,9 @@ export function AccountVerificationFormStep3LoadingSteps() {
                 One last step to go...
               </p>
             </div>
-            <Button block onClick={goForward}>Continue</Button>
+            <Button block onClick={goForward}>
+              Continue
+            </Button>
           </div>
         ) : (
           <div className="w-full space-y-8">
@@ -111,6 +138,7 @@ export function AccountVerificationFormStep3LoadingSteps() {
           </div>
         )}
 
+        {/* (Optional) Display the webhook event data */}
         {webhookData && (
           <div className="mt-8 w-full bg-gray-100 p-4 rounded shadow">
             <h3 className="text-lg font-semibold mb-2">Webhook Event Data</h3>
@@ -120,7 +148,10 @@ export function AccountVerificationFormStep3LoadingSteps() {
           </div>
         )}
       </div>
-      <AccountVerificationFormResumeInBackgroundModal isOpen={isResumeModalOpen} onClose={closeResumeModal} />
+      <AccountVerificationFormResumeInBackgroundModal
+        isOpen={isResumeModalOpen}
+        onClose={closeResumeModal}
+      />
     </div>
   );
 }

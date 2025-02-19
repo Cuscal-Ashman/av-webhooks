@@ -3,7 +3,7 @@ import { Server } from "socket.io";
 
 export default function handler(req, res) {
   if (!res.socket.server.io) {
-    console.log("Initializing Socket.IO server...");
+    console.log("🚀 Initializing Socket.IO server...");
 
     const io = new Server(res.socket.server, {
       path: "/api/socketio",
@@ -13,15 +13,14 @@ export default function handler(req, res) {
       },
     });
 
-    // Store io instance to prevent reinitialization
     res.socket.server.io = io;
 
     // Handle WebSocket connection events
     io.on("connection", (socket) => {
-      console.log("New client connected:", socket.id);
+      console.log("✅ New client connected:", socket.id);
 
       socket.on("disconnect", () => {
-        console.log("Client disconnected:", socket.id);
+        console.log("❌ Client disconnected:", socket.id);
       });
     });
   }
@@ -29,11 +28,22 @@ export default function handler(req, res) {
   const io = res.socket.server.io;
 
   if (req.method === "POST") {
-    console.log("Received Webhook:", req.body);
+    console.log("📩 Received Webhook:", req.body);
 
-    // Emit webhook data to all connected clients
+    // Emit webhook event to all connected clients
     io.emit("webhookEvent", req.body);
-    
+
+    // Check if eventTypeId is "transactions.updated" and disconnect all clients
+    if (req.body.eventTypeId === "transactions.updated") {
+      console.log("🔴 'transactions.updated' received, disconnecting all clients...");
+
+      // Disconnect all connected clients
+      io.sockets.sockets.forEach((socket) => {
+        console.log(`🔌 Disconnecting socket: ${socket.id}`);
+        socket.disconnect(true);
+      });
+    }
+
     return res.status(200).json({ success: true });
   }
 
