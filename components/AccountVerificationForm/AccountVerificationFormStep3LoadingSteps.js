@@ -58,6 +58,7 @@ export function AccountVerificationFormStep3LoadingSteps() {
         }
       }, 2000); // Delay of 2 seconds (2000ms)
     });
+    
 
     socket.on("disconnect", () => {
       console.log("Socket disconnected.");
