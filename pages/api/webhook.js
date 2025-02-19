@@ -6,23 +6,12 @@ import { useAccountVerificationForm } from "./AccountVerificationFormProvider";
 import { AccountVerificationFormResumeInBackgroundModal } from "./AccountVerificationFormResumeInBackgroundModal";
 
 export function AccountVerificationFormStep3LoadingSteps() {
-  const [progress, setProgress] = useState(0);
   const [webhookData, setWebhookData] = useState(null);
   const [alertMessage, setAlertMessage] = useState("");
   const [isAlertVisible, setIsAlertVisible] = useState(false);
-  const [localJobId, setLocalJobId] = useState(null);
 
   const { basiqConnection, goForward } = useAccountVerificationForm();
-  const { error, completed, setJobId } = basiqConnection;
-
-  // Extract job ID from URL
-  useEffect(() => {
-    const jobIdsParam = new URLSearchParams(window.location.search).get("jobIds");
-    if (jobIdsParam) {
-      setLocalJobId(jobIdsParam);
-      setJobId(jobIdsParam);
-    }
-  }, [setJobId]);
+  const { error, completed } = basiqConnection;
 
   // Listen for WebSocket Events
   useEffect(() => {
@@ -63,14 +52,14 @@ export function AccountVerificationFormStep3LoadingSteps() {
       )}
 
       <div className="flex flex-col items-center text-center space-y-8">
-        <CircularProgressBar value={progress} error={error} />
+        <CircularProgressBar value={100} error={error} />
 
         {error ? (
           <div className="w-full space-y-8">
             <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
               {error?.message || "An error occurred"}
             </h2>
-            <Button block onClick={setJobId}>Try again</Button>
+            <Button block onClick={() => window.location.reload()}>Try again</Button>
           </div>
         ) : completed ? (
           <div className="w-full space-y-8">
@@ -85,7 +74,7 @@ export function AccountVerificationFormStep3LoadingSteps() {
           </div>
         )}
 
-        {/* Display webhook data for debugging */}
+        {/* Display webhook event data for debugging */}
         {webhookData && (
           <div className="mt-8 w-full bg-gray-100 p-4 rounded shadow">
             <h3 className="text-lg font-semibold mb-2">Webhook Event Data</h3>
