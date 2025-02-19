@@ -17,8 +17,8 @@ export function AccountVerificationFormStep3LoadingSteps() {
 
   const [progress, setProgress] = useState(0);
   const [localJobId, setLocalJobId] = useState(null);
-  const [webhookData, setWebhookData] = useState(null);
-  const [isWaiting, setIsWaiting] = useState(true); // Track if still waiting
+  const [isWaiting, setIsWaiting] = useState(true);
+  const [pollingActive, setPollingActive] = useState(true); // ✅ Track if polling is active
 
   // Extract job ID from URL query parameter
   useEffect(() => {
@@ -36,29 +36,31 @@ export function AccountVerificationFormStep3LoadingSteps() {
 
   // Simulated progress increase while waiting for webhook
   useEffect(() => {
-    if (progress < 90 && isWaiting) {
+    if (progress < 90 && isWaiting && pollingActive) {
       const intervalId = setInterval(() => {
         setProgress((prev) => (prev < 90 ? prev + 5 : prev)); // Increase by 5% every 2 sec
       }, 2000);
       return () => clearInterval(intervalId);
     }
-  }, [progress, isWaiting]);
+  }, [progress, isWaiting, pollingActive]);
 
   // Function to poll webhook data
   const pollWebhookData = async () => {
     try {
+      if (!pollingActive) return; // ✅ Stop polling when webhook is received
+
       const response = await fetch("/api/webhook");
       if (!response.ok) throw new Error("Network response was not ok");
 
       const data = await response.json();
       if (data.message !== "No webhook data received yet") {
-        setWebhookData(data);
         console.log("📩 Received webhook data:", data);
 
         if (data.data.eventTypeId === "transactions.updated" && localJobId) {
           setProgress(100); // Set progress to 100% when webhook updates
           setJobId(localJobId);
           setIsWaiting(false); // Stop fake progress when webhook updates
+          setPollingActive(false); // ✅ Stop polling after webhook is received
         }
       }
     } catch (error) {
@@ -68,10 +70,12 @@ export function AccountVerificationFormStep3LoadingSteps() {
 
   // Poll for webhook data every 5 seconds
   useEffect(() => {
+    if (!pollingActive) return; // ✅ Prevent running extra intervals
+
     const intervalId = setInterval(pollWebhookData, 5000);
     pollWebhookData(); // Initial poll
     return () => clearInterval(intervalId);
-  }, [localJobId]);
+  }, [localJobId, pollingActive]);
 
   return (
     <div className="flex flex-col space-y-10 sm:space-y-12">
@@ -125,16 +129,6 @@ export function AccountVerificationFormStep3LoadingSteps() {
             {progress === 100 && <Button block onClick={goForward}>Continue</Button>}
           </div>
         ) : null}
-
-        {/* ✅ Display Webhook Data in UI */}
-        {webhookData && (
-          <div className="mt-8 w-full bg-gray-100 p-4 rounded shadow">
-            <h3 className="text-lg font-semibold mb-2">Webhook Event Data</h3>
-            <pre className="text-xs overflow-auto">
-              {JSON.stringify(webhookData.data, null, 2)}
-            </pre>
-          </div>
-        )}
       </div>
       <AccountVerificationFormResumeInBackgroundModal
         isOpen={isResumeModalOpen}
