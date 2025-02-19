@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import io from "socket.io-client";
+import { Transition } from "@headlessui/react";
 import { Button } from "../Button";
 import { CircularProgressBar } from "../CircularProgressBar";
 import { useAccountVerificationForm } from "./AccountVerificationFormProvider";
@@ -27,7 +28,7 @@ export function AccountVerificationFormStep3LoadingSteps() {
     }
   }, [setJobId]);
 
-  // Wait for Webhook Event (No Polling)
+  // Listen for Webhook Event (No Polling)
   useEffect(() => {
     if (typeof window === "undefined" || !localJobId) return;
 
@@ -65,12 +66,20 @@ export function AccountVerificationFormStep3LoadingSteps() {
 
   return (
     <div className="flex flex-col space-y-10 sm:space-y-12">
-      {/* Alert Message */}
-      {isAlertVisible && (
+      {/* Alert with Transition Animation */}
+      <Transition
+        show={isAlertVisible}
+        enter="transition ease-out duration-300"
+        enterFrom="opacity-0 translate-y-4"
+        enterTo="opacity-100 translate-y-0"
+        leave="transition ease-in duration-300"
+        leaveFrom="opacity-100 translate-y-0"
+        leaveTo="opacity-0 translate-y-4"
+      >
         <div className="fixed top-4 right-4 bg-green-500 text-white p-4 rounded shadow-lg">
           {alertMessage}
         </div>
-      )}
+      </Transition>
 
       <div className="flex flex-col items-center text-center space-y-8">
         <CircularProgressBar value={progress} error={error} />
@@ -99,7 +108,7 @@ export function AccountVerificationFormStep3LoadingSteps() {
           </div>
         )}
 
-        {/* (Optional) Display webhook data for debugging */}
+        {/* Display webhook event data for debugging */}
         {webhookData && (
           <div className="mt-8 w-full bg-gray-100 p-4 rounded shadow">
             <h3 className="text-lg font-semibold mb-2">Webhook Event Data</h3>
