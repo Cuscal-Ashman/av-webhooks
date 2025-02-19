@@ -18,7 +18,7 @@ export function AccountVerificationFormStep3LoadingSteps() {
   const [progress, setProgress] = useState(0);
   const [localJobId, setLocalJobId] = useState(null);
   const [webhookData, setWebhookData] = useState(null);
-  const [isWaiting, setIsWaiting] = useState(true); // Track if we are still waiting
+  const [isWaiting, setIsWaiting] = useState(true); // Track if still waiting
 
   // Extract job ID from URL query parameter
   useEffect(() => {
@@ -99,9 +99,13 @@ export function AccountVerificationFormStep3LoadingSteps() {
                 {STEP_NAME_MAP[stepNameInProgress]}
               </h2>
             </div>
-            <Button block variant="subtle" onClick={openResumeModal}>
-              Resume in background
-            </Button>
+
+            {/* ✅ Hide "Resume in background" when progress reaches 100% */}
+            {progress < 100 && (
+              <Button block variant="subtle" onClick={openResumeModal}>
+                Resume in background
+              </Button>
+            )}
           </div>
         )}
 
@@ -116,6 +120,8 @@ export function AccountVerificationFormStep3LoadingSteps() {
                 One last step to go...
               </p>
             </div>
+
+            {/* ✅ Show "Continue" button only at 100% */}
             {progress === 100 && <Button block onClick={goForward}>Continue</Button>}
           </div>
         ) : null}
