@@ -18,6 +18,7 @@ export function AccountVerificationFormStep3LoadingSteps() {
   const [progress, setProgress] = useState(0);
   const [localJobId, setLocalJobId] = useState(null);
   const [webhookData, setWebhookData] = useState(null);
+  const [isWaiting, setIsWaiting] = useState(true); // Track if we are still waiting
 
   // Extract job ID from URL query parameter
   useEffect(() => {
@@ -33,6 +34,16 @@ export function AccountVerificationFormStep3LoadingSteps() {
     }
   }, [setJobId]);
 
+  // Simulated progress increase while waiting for webhook
+  useEffect(() => {
+    if (progress < 90 && isWaiting) {
+      const intervalId = setInterval(() => {
+        setProgress((prev) => (prev < 90 ? prev + 5 : prev)); // Increase by 5% every 2 sec
+      }, 2000);
+      return () => clearInterval(intervalId);
+    }
+  }, [progress, isWaiting]);
+
   // Function to poll webhook data
   const pollWebhookData = async () => {
     try {
@@ -45,8 +56,9 @@ export function AccountVerificationFormStep3LoadingSteps() {
         console.log("📩 Received webhook data:", data);
 
         if (data.data.eventTypeId === "transactions.updated" && localJobId) {
-          setProgress(100);
+          setProgress(100); // Set progress to 100% when webhook updates
           setJobId(localJobId);
+          setIsWaiting(false); // Stop fake progress when webhook updates
         }
       }
     } catch (error) {
@@ -80,20 +92,6 @@ export function AccountVerificationFormStep3LoadingSteps() {
               Try again
             </Button>
           </div>
-        ) : completed ? (
-          <div className="w-full space-y-8">
-            <div className="space-y-3 sm:space-y-4">
-              <h3 className="text-xl font-semibold tracking-tight sm:text-2xl">
-                Connected 🎉
-              </h3>
-              <p className="text-sm sm:text-base text-neutral-muted-darker">
-                One last step to go...
-              </p>
-            </div>
-            <Button block onClick={goForward}>
-              Continue
-            </Button>
-          </div>
         ) : (
           <div className="w-full space-y-8">
             <div className="space-y-3 sm:space-y-4">
@@ -106,6 +104,21 @@ export function AccountVerificationFormStep3LoadingSteps() {
             </Button>
           </div>
         )}
+
+        {/* ✅ Hides "Continue" Button when progress is 0 */}
+        {completed && progress > 0 ? (
+          <div className="w-full space-y-8">
+            <div className="space-y-3 sm:space-y-4">
+              <h3 className="text-xl font-semibold tracking-tight sm:text-2xl">
+                Connected 🎉
+              </h3>
+              <p className="text-sm sm:text-base text-neutral-muted-darker">
+                One last step to go...
+              </p>
+            </div>
+            {progress === 100 && <Button block onClick={goForward}>Continue</Button>}
+          </div>
+        ) : null}
 
         {/* ✅ Display Webhook Data in UI */}
         {webhookData && (
