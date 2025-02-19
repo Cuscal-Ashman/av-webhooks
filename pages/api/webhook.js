@@ -1,48 +1,30 @@
-import { NextResponse } from "next/server";
-import { headers } from "next/headers";
+export default function handler(req, res) {
+  if (req.method === "POST") {
+    try {
+      console.log("📩 Received webhook data:", req.body);
 
-// Store webhook data in memory (note: resets on server restart)
-let lastWebhookData = null;
+      // Store webhook data (Resets on server restart)
+      global.lastWebhookData = {
+        timestamp: new Date().toISOString(),
+        data: req.body,
+      };
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
-export async function POST(request) {
-  const headersList = headers();
-  const contentType = headersList.get("content-type");
-
-  console.log("Received POST request with content type:", contentType);
-
-  if (contentType !== "application/json") {
-    return NextResponse.json({ error: "Invalid content type" }, { status: 415 });
-  }
-
-  try {
-    const webhookData = await request.json();
-    console.log("Received webhook data:", JSON.stringify(webhookData));
-
-    lastWebhookData = {
-      timestamp: new Date().toISOString(),
-      data: webhookData,
-    };
-
-    return NextResponse.json({
-      success: true,
-      message: "Webhook received and stored",
-      data: lastWebhookData,
-    });
-  } catch (error) {
-    console.error("Error processing webhook:", error);
-    return NextResponse.json(
-      {
+      return res.status(200).json({
+        success: true,
+        message: "Webhook received and stored",
+        data: global.lastWebhookData,
+      });
+    } catch (error) {
+      console.error("❌ Error processing webhook:", error);
+      return res.status(500).json({
         error: "Internal server error",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 }
-    );
+        details: error.message || "Unknown error",
+      });
+    }
+  } else if (req.method === "GET") {
+    return res.status(200).json(global.lastWebhookData || { message: "No webhook data received yet" });
   }
-}
 
-export async function GET() {
-  return NextResponse.json(lastWebhookData || { message: "No webhook data received yet" });
+  res.setHeader("Allow", ["POST", "GET"]);
+  return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
 }
