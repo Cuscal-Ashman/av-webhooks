@@ -39,7 +39,7 @@ export function AccountVerificationFormStep3LoadingSteps() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const socket = io(window.location.origin, { path: "/api/socketio" });
+    const socket = io(window.location.origin, { path: "/api/webhook" });
 
     socket.on("connect", () => {
       console.log("Socket connected with id:", socket.id);

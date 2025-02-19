@@ -8,7 +8,7 @@ export default function handler(req, res) {
 
     // Initialize the Socket.IO server on the underlying HTTP server
     const io = new Server(res.socket.server, {
-      path: "/api/socketio",
+      path: "/api/webhook",
       // Uncomment and configure CORS if needed:
       // cors: { origin: "*" },
     });
