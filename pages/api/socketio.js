@@ -13,8 +13,17 @@ export default function handler(req, res) {
       },
     });
 
-    // Store io instance in res.socket.server to prevent reinitialization
+    // Store io instance to prevent reinitialization
     res.socket.server.io = io;
+
+    // Handle WebSocket connection events
+    io.on("connection", (socket) => {
+      console.log("New client connected:", socket.id);
+
+      socket.on("disconnect", () => {
+        console.log("Client disconnected:", socket.id);
+      });
+    });
   }
 
   const io = res.socket.server.io;
@@ -24,7 +33,7 @@ export default function handler(req, res) {
 
     // Emit webhook data to all connected clients
     io.emit("webhookEvent", req.body);
-
+    
     return res.status(200).json({ success: true });
   }
 
