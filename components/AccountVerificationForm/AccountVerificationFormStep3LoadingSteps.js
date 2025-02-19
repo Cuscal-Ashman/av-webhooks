@@ -47,32 +47,12 @@ export function AccountVerificationFormStep3LoadingSteps() {
         if (data.data.eventTypeId === "transactions.updated" && localJobId) {
           setProgress(100);
           setJobId(localJobId);
-          // pollJobEndpoint(localJobId);
         }
       }
     } catch (error) {
       console.error("❌ Error fetching webhook data:", error);
     }
   };
-
-  // Function to call job endpoint
-  async function pollJobEndpoint(jobId) {
-    if (!jobId) return;
-    try {
-      console.log("🚀 Checking job status for jobId:", jobId);
-      const response = await fetch(`/api/job-status/${jobId}`);
-      const data = await response.json();
-
-      if (data.completed) {
-        console.log("✅ Job completed!", data);
-      } else {
-        console.log("⏳ Job still in progress...", data);
-        setTimeout(() => pollJobEndpoint(jobId), 2000);
-      }
-    } catch (error) {
-      console.error("❌ Error polling job endpoint:", error);
-    }
-  }
 
   // Poll for webhook data every 5 seconds
   useEffect(() => {
