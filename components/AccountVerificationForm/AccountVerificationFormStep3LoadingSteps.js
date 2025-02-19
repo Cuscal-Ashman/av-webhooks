@@ -40,28 +40,19 @@ export function AccountVerificationFormStep3LoadingSteps() {
     if (typeof window === "undefined") return; // Ensure it's client-side
   
     const socket = io("https://av-webhooks.vercel.app", { path: "/api/socketio" });
-  
+
     socket.on("connect", () => {
-      console.log("Socket connected with id:", socket.id);
+      console.log("Connected to WebSocket:", socket.id);
     });
-  
+    
     socket.on("webhookEvent", (data) => {
-      console.log("Received webhook event:", data);
-  
-      setTimeout(() => {
-        setWebhookData(data);
-  
-        if (data.eventTypeId === "transactions.updated" && localJobId) {
-          setProgress(100);
-          setJobId(localJobId);
-          socket.disconnect(); // ✅ Close socket upon completion
-        }
-      }, 2000); // Delay by 2 seconds
+      console.log("Received Webhook Data:", data);
     });
-  
+    
     socket.on("disconnect", () => {
       console.log("Socket disconnected.");
     });
+    
   
     return () => {
       console.log("Cleaning up socket connection...");
