@@ -1,51 +1,48 @@
-// pages/api/socketio.js
-import { Server } from "socket.io";
+import { NextResponse } from "next/server";
+import { headers } from "next/headers";
 
-export default function handler(req, res) {
-  if (!res.socket.server.io) {
-    console.log("🚀 Initializing Socket.IO server...");
+// Store webhook data in memory (note: resets on server restart)
+let lastWebhookData = null;
 
-    const io = new Server(res.socket.server, {
-      path: "/api/socketio",
-      cors: {
-        origin: "*",
-        methods: ["GET", "POST"],
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+export async function POST(request) {
+  const headersList = headers();
+  const contentType = headersList.get("content-type");
+
+  console.log("Received POST request with content type:", contentType);
+
+  if (contentType !== "application/json") {
+    return NextResponse.json({ error: "Invalid content type" }, { status: 415 });
+  }
+
+  try {
+    const webhookData = await request.json();
+    console.log("Received webhook data:", JSON.stringify(webhookData));
+
+    lastWebhookData = {
+      timestamp: new Date().toISOString(),
+      data: webhookData,
+    };
+
+    return NextResponse.json({
+      success: true,
+      message: "Webhook received and stored",
+      data: lastWebhookData,
+    });
+  } catch (error) {
+    console.error("Error processing webhook:", error);
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+        details: error instanceof Error ? error.message : "Unknown error",
       },
-    });
-
-    res.socket.server.io = io;
-
-    // Handle WebSocket connection events
-    io.on("connection", (socket) => {
-      console.log("✅ New client connected:", socket.id);
-
-      socket.on("disconnect", () => {
-        console.log("❌ Client disconnected:", socket.id);
-      });
-    });
+      { status: 500 }
+    );
   }
+}
 
-  const io = res.socket.server.io;
-
-  if (req.method === "POST") {
-    console.log("📩 Received Webhook:", req.body);
-
-    // Emit webhook event to all connected clients
-    io.emit("webhookEvent", req.body);
-
-    // Check if eventTypeId is "transactions.updated" and disconnect all clients
-    if (req.body.eventTypeId === "transactions.updated") {
-      console.log("🔴 'transactions.updated' received, disconnecting all clients...");
-
-      // Disconnect all connected clients
-      io.sockets.sockets.forEach((socket) => {
-        console.log(`🔌 Disconnecting socket: ${socket.id}`);
-        socket.disconnect(true);
-      });
-    }
-
-    return res.status(200).json({ success: true });
-  }
-
-  res.end();
+export async function GET() {
+  return NextResponse.json(lastWebhookData || { message: "No webhook data received yet" });
 }

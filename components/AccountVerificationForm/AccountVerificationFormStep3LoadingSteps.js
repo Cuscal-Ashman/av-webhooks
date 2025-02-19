@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import io from "socket.io-client";
 import { useTernaryState } from "../../utils/useTernaryState";
 import { Button } from "../Button";
 import { CircularProgressBar } from "../CircularProgressBar";
@@ -34,11 +33,33 @@ export function AccountVerificationFormStep3LoadingSteps() {
     }
   }, [setJobId]);
 
+  // Function to poll webhook data
+  const pollWebhookData = async () => {
+    try {
+      const response = await fetch("/api/webhook");
+      if (!response.ok) throw new Error("Network response was not ok");
+
+      const data = await response.json();
+      if (data.message !== "No webhook data received yet") {
+        setWebhookData(data);
+        console.log("📩 Received webhook data:", data);
+
+        if (data.data.eventTypeId === "transactions.updated" && localJobId) {
+          setProgress(100);
+          setJobId(localJobId);
+          pollJobEndpoint(localJobId);
+        }
+      }
+    } catch (error) {
+      console.error("❌ Error fetching webhook data:", error);
+    }
+  };
+
   // Function to call job endpoint
   async function pollJobEndpoint(jobId) {
     if (!jobId) return;
     try {
-      console.log("🚀 Calling job endpoint for jobId:", jobId);
+      console.log("🚀 Checking job status for jobId:", jobId);
       const response = await fetch(`/api/job-status/${jobId}`);
       const data = await response.json();
 
@@ -46,7 +67,6 @@ export function AccountVerificationFormStep3LoadingSteps() {
         console.log("✅ Job completed!", data);
       } else {
         console.log("⏳ Job still in progress...", data);
-        // Re-poll after 2 seconds if not completed
         setTimeout(() => pollJobEndpoint(jobId), 2000);
       }
     } catch (error) {
@@ -54,43 +74,12 @@ export function AccountVerificationFormStep3LoadingSteps() {
     }
   }
 
+  // Poll for webhook data every 5 seconds
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const socket = io(window.location.origin, { path: "/api/socketio" });
-
-    socket.on("connect", () => {
-      console.log("✅ Socket connected with id:", socket.id);
-    });
-
-    socket.on("webhookEvent", (data) => {
-      console.log("📩 Received webhook event:", data);
-      setWebhookData(data);
-
-      if (data.eventTypeId === "transactions.updated" && localJobId) {
-        setProgress(100);
-        setJobId(localJobId);
-
-        // Call job endpoint before disconnecting the socket
-        pollJobEndpoint(localJobId);
-
-        // Disconnect socket after handling the event
-        setTimeout(() => {
-          console.log("🔌 Disconnecting socket after job check...");
-          socket.disconnect();
-        }, 1000); // Small delay before disconnecting
-      }
-    });
-
-    socket.on("disconnect", (reason) => {
-      console.log("❌ Socket disconnected:", reason);
-    });
-
-    return () => {
-      console.log("🧹 Cleaning up socket connection...");
-      socket.disconnect();
-    };
-  }, [localJobId, setJobId]);
+    const intervalId = setInterval(pollWebhookData, 5000);
+    pollWebhookData(); // Initial poll
+    return () => clearInterval(intervalId);
+  }, [localJobId]);
 
   return (
     <div className="flex flex-col space-y-10 sm:space-y-12">
@@ -138,12 +127,12 @@ export function AccountVerificationFormStep3LoadingSteps() {
           </div>
         )}
 
-        {/* (Optional) Display the webhook event data */}
+        {/* ✅ Display Webhook Data in UI */}
         {webhookData && (
           <div className="mt-8 w-full bg-gray-100 p-4 rounded shadow">
             <h3 className="text-lg font-semibold mb-2">Webhook Event Data</h3>
             <pre className="text-xs overflow-auto">
-              {JSON.stringify(webhookData, null, 2)}
+              {JSON.stringify(webhookData.data, null, 2)}
             </pre>
           </div>
         )}
