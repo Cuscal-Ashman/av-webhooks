@@ -19,7 +19,7 @@ export function AccountVerificationFormStep3LoadingSteps() {
   const [localJobId, setLocalJobId] = useState(null);
   const [isWaiting, setIsWaiting] = useState(true);
   const [pollingActive, setPollingActive] = useState(true);
-  const [webhookReceived, setWebhookReceived] = useState(false); // ✅ State for webhook alert
+  const [webhookReceived, setWebhookReceived] = useState(false); // For showing the webhook alert
 
   // Extract job ID from URL query parameter
   useEffect(() => {
@@ -35,17 +35,17 @@ export function AccountVerificationFormStep3LoadingSteps() {
     }
   }, [setJobId]);
 
-  // Smooth progress increase while waiting for webhook
+  // Smooth progress increase while waiting for the webhook
   useEffect(() => {
     if (progress < 90 && isWaiting && pollingActive) {
       const intervalId = setInterval(() => {
-        setProgress((prev) => (prev < 90 ? prev + 1 : prev)); // ✅ Increase by 1% every 500ms
+        setProgress((prev) => (prev < 90 ? prev + 1 : prev));
       }, 500);
       return () => clearInterval(intervalId);
     }
   }, [progress, isWaiting, pollingActive]);
 
-  // Function to poll webhook data
+  // Polling function to check if the webhook has been received
   const pollWebhookData = async () => {
     try {
       if (!pollingActive) return;
@@ -62,9 +62,9 @@ export function AccountVerificationFormStep3LoadingSteps() {
           setJobId(localJobId);
           setIsWaiting(false);
           setPollingActive(false);
-          setWebhookReceived(true); // ✅ Show webhook received alert
+          setWebhookReceived(true); // Show webhook received alert
 
-          // ✅ Hide the alert after 5 seconds
+          // Hide the alert after 5 seconds
           setTimeout(() => {
             setWebhookReceived(false);
           }, 5000);
@@ -75,20 +75,22 @@ export function AccountVerificationFormStep3LoadingSteps() {
     }
   };
 
-  // Poll for webhook data every 5 seconds
+  // Initiate polling every 5 seconds
   useEffect(() => {
     if (!pollingActive) return;
 
     const intervalId = setInterval(pollWebhookData, 5000);
-    pollWebhookData(); // Initial poll
+    pollWebhookData(); // Initial immediate call
     return () => clearInterval(intervalId);
   }, [localJobId, pollingActive]);
 
   return (
     <div className="flex flex-col space-y-10 sm:space-y-12 relative">
       <div className="flex flex-col items-center text-center space-y-8">
+        {/* Circular progress bar */}
         <CircularProgressBar value={progress} error={error} />
 
+        {/* If there's an error, show it; otherwise, show current step in progress */}
         {error ? (
           <div className="w-full space-y-8">
             <div className="space-y-3 sm:space-y-4">
@@ -99,7 +101,9 @@ export function AccountVerificationFormStep3LoadingSteps() {
                 {error?.message}
               </p>
             </div>
-            <Button block onClick={reset}>Try again</Button>
+            <Button block onClick={reset}>
+              Try again
+            </Button>
           </div>
         ) : (
           <div className="w-full space-y-8">
@@ -109,6 +113,7 @@ export function AccountVerificationFormStep3LoadingSteps() {
               </h2>
             </div>
 
+            {/* Optionally let user continue in background if not finished loading */}
             {progress < 100 && (
               <Button block variant="subtle" onClick={openResumeModal}>
                 Resume in background
@@ -117,22 +122,38 @@ export function AccountVerificationFormStep3LoadingSteps() {
           </div>
         )}
 
+        {/* Show status after job is "completed" with some progress */}
         {completed && progress > 0 ? (
           <div className="w-full space-y-8">
             <div className="space-y-3 sm:space-y-4">
-              <h3 className="text-xl font-semibold tracking-tight sm:text-2xl">
-                Connected 🎉
-              </h3>
-              <p className="text-sm sm:text-base text-neutral-muted-darker">
-                One last step to go...
-              </p>
+              {/* If progress < 100 => "Connecting...", else "Connected" */}
+              {progress < 100 ? (
+                <h3 className="text-xl font-semibold tracking-tight sm:text-2xl">
+                  Connecting...
+                </h3>
+              ) : (
+                <>
+                  <h3 className="text-xl font-semibold tracking-tight sm:text-2xl">
+                    Connected 🎉
+                  </h3>
+                  <p className="text-sm sm:text-base text-neutral-muted-darker">
+                    One last step to go...
+                  </p>
+                </>
+              )}
             </div>
 
-            {progress === 100 && <Button block onClick={goForward}>Continue</Button>}
+            {/* Show the "Continue" button only when progress is 100% */}
+            {progress === 100 && (
+              <Button block onClick={goForward}>
+                Continue
+              </Button>
+            )}
           </div>
         ) : null}
       </div>
 
+      {/* Background Resume Modal */}
       <AccountVerificationFormResumeInBackgroundModal
         isOpen={isResumeModalOpen}
         onClose={closeResumeModal}
@@ -183,7 +204,6 @@ export function AccountVerificationFormStep3LoadingSteps() {
           animation: fadeIn 0.5s ease-out forwards;
         }
       `}</style>
-
     </div>
   );
 }
