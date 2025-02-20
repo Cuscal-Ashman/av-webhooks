@@ -18,7 +18,8 @@ export function AccountVerificationFormStep3LoadingSteps() {
   const [progress, setProgress] = useState(0);
   const [localJobId, setLocalJobId] = useState(null);
   const [isWaiting, setIsWaiting] = useState(true);
-  const [pollingActive, setPollingActive] = useState(true); // ✅ Track if polling is active
+  const [pollingActive, setPollingActive] = useState(true);
+  const [webhookReceived, setWebhookReceived] = useState(false); // ✅ State for webhook alert
 
   // Extract job ID from URL query parameter
   useEffect(() => {
@@ -34,12 +35,12 @@ export function AccountVerificationFormStep3LoadingSteps() {
     }
   }, [setJobId]);
 
-  // Simulated progress increase while waiting for webhook
+  // Smooth progress increase while waiting for webhook
   useEffect(() => {
     if (progress < 90 && isWaiting && pollingActive) {
       const intervalId = setInterval(() => {
-        setProgress((prev) => (prev < 90 ? prev + 5 : prev)); // Increase by 5% every 2 sec
-      }, 2000);
+        setProgress((prev) => (prev < 90 ? prev + 1 : prev)); // ✅ Increase by 1% every 500ms
+      }, 500);
       return () => clearInterval(intervalId);
     }
   }, [progress, isWaiting, pollingActive]);
@@ -47,7 +48,7 @@ export function AccountVerificationFormStep3LoadingSteps() {
   // Function to poll webhook data
   const pollWebhookData = async () => {
     try {
-      if (!pollingActive) return; // ✅ Stop polling when webhook is received
+      if (!pollingActive) return;
 
       const response = await fetch("/api/webhook");
       if (!response.ok) throw new Error("Network response was not ok");
@@ -57,10 +58,16 @@ export function AccountVerificationFormStep3LoadingSteps() {
         console.log("📩 Received webhook data:", data);
 
         if (data.data.eventTypeId === "transactions.updated" && localJobId) {
-          setProgress(100); // Set progress to 100% when webhook updates
+          setProgress(100);
           setJobId(localJobId);
-          setIsWaiting(false); // Stop fake progress when webhook updates
-          setPollingActive(false); // ✅ Stop polling after webhook is received
+          setIsWaiting(false);
+          setPollingActive(false);
+          setWebhookReceived(true); // ✅ Show webhook received alert
+
+          // ✅ Hide the alert after 5 seconds
+          setTimeout(() => {
+            setWebhookReceived(false);
+          }, 5000);
         }
       }
     } catch (error) {
@@ -70,7 +77,7 @@ export function AccountVerificationFormStep3LoadingSteps() {
 
   // Poll for webhook data every 5 seconds
   useEffect(() => {
-    if (!pollingActive) return; // ✅ Prevent running extra intervals
+    if (!pollingActive) return;
 
     const intervalId = setInterval(pollWebhookData, 5000);
     pollWebhookData(); // Initial poll
@@ -78,7 +85,7 @@ export function AccountVerificationFormStep3LoadingSteps() {
   }, [localJobId, pollingActive]);
 
   return (
-    <div className="flex flex-col space-y-10 sm:space-y-12">
+    <div className="flex flex-col space-y-10 sm:space-y-12 relative">
       <div className="flex flex-col items-center text-center space-y-8">
         <CircularProgressBar value={progress} error={error} />
 
@@ -92,9 +99,7 @@ export function AccountVerificationFormStep3LoadingSteps() {
                 {error?.message}
               </p>
             </div>
-            <Button block onClick={reset}>
-              Try again
-            </Button>
+            <Button block onClick={reset}>Try again</Button>
           </div>
         ) : (
           <div className="w-full space-y-8">
@@ -104,7 +109,6 @@ export function AccountVerificationFormStep3LoadingSteps() {
               </h2>
             </div>
 
-            {/* ✅ Hide "Resume in background" when progress reaches 100% */}
             {progress < 100 && (
               <Button block variant="subtle" onClick={openResumeModal}>
                 Resume in background
@@ -113,7 +117,6 @@ export function AccountVerificationFormStep3LoadingSteps() {
           </div>
         )}
 
-        {/* ✅ Hides "Continue" Button when progress is 0 */}
         {completed && progress > 0 ? (
           <div className="w-full space-y-8">
             <div className="space-y-3 sm:space-y-4">
@@ -125,15 +128,34 @@ export function AccountVerificationFormStep3LoadingSteps() {
               </p>
             </div>
 
-            {/* ✅ Show "Continue" button only at 100% */}
             {progress === 100 && <Button block onClick={goForward}>Continue</Button>}
           </div>
         ) : null}
       </div>
+
       <AccountVerificationFormResumeInBackgroundModal
         isOpen={isResumeModalOpen}
         onClose={closeResumeModal}
       />
+
+      {/* ✅ Webhook Alert Box */}
+      {webhookReceived && (
+        <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg opacity-0 animate-fade-in">
+          ✅ Webhook received! Progress complete.
+        </div>
+      )}
+
+      {/* ✅ Tailwind Animation */}
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-fade-in {
+          animation: fadeIn 0.5s ease-out forwards;
+        }
+      `}</style>
     </div>
   );
 }
