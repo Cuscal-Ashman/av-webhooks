@@ -140,9 +140,28 @@ export function AccountVerificationFormStep3LoadingSteps() {
 
       {/* ✅ Webhook Alert Box */}
       {webhookReceived && (
-        <div className="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg opacity-0 animate-fade-in">
-          ✅ Webhook received! Progress complete.
+        <div
+        className="fixed bottom-4 right-4 
+                   bg-green-100 border-l-4 border-green-500 
+                   text-green-800 px-4 py-3 rounded shadow-lg 
+                   transition-opacity duration-500 
+                   opacity-0 animate-fade-in"
+        role="alert"
+      >
+        <div className="flex items-center">
+          <svg
+            className="fill-current w-5 h-5 text-green-500 mr-2"
+            viewBox="0 0 20 20"
+            role="img"
+            aria-hidden="true"
+          >
+            <title>Check</title>
+            <path d="M0 11l2-2 8 8L18 3l2 2-12 14z" />
+          </svg>
+          <p className="font-bold">Webhook received!</p>
         </div>
+        <p className="text-sm">Progress complete.</p>
+      </div>
       )}
 
       {/* ✅ Tailwind Animation */}
